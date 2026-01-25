@@ -1,0 +1,13 @@
+erDiagram
+{% for dataset in datasets %}
+    {{ dataset.name }} {
+{% for field in dataset.fields %}
+        {{ field.data_type }} {{ field.name }}{% if field.is_primary_key %} PK{% endif %}{% if field.is_foreign_key %} FK{% endif %}
+
+{% endfor %}
+    }
+{% endfor %}
+
+{% for rel in relationships %}
+    {{ rel.from_dataset }} {{ rel.cardinality }} {{ rel.to_dataset }} : "{{ rel.label }}"
+{% endfor %}

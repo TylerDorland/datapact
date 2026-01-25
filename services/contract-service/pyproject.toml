@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "contract-service"
+version = "0.1.0"
+description = "DataPact Contract Service - Central registry for data contracts"
+authors = ["DataPact Team"]
+packages = [{include = "contract_service", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.25"}
+asyncpg = "^0.29.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+alembic = "^1.13.0"
+httpx = "^0.26.0"
+pyyaml = "^6.0.0"
+datapact-common = {path = "../../shared/datapact_common", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+ruff = "^0.1.0"
+mypy = "^1.8.0"
+aiosqlite = "^0.19.0"
+respx = "^0.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

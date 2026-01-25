@@ -1,0 +1,100 @@
+# DataPact Contract Definition
+# This file defines the data contract for the template data service
+
+name: example_dataset
+version: "1.0.0"
+description: Example dataset demonstrating DataPact contract compliance
+
+publisher:
+  team: platform
+  owner: template-data-service
+  repository_url: https://github.com/datapact/template-data-service
+  contact_email: platform@example.com
+
+schema:
+  - name: id
+    data_type: uuid
+    description: Unique identifier for the data entry
+    nullable: false
+    is_primary_key: true
+
+  - name: name
+    data_type: string
+    description: Name of the data entry
+    nullable: false
+    constraints:
+      - type: max_length
+        value: 255
+        message: Name must be 255 characters or less
+
+  - name: description
+    data_type: string
+    description: Optional description of the data entry
+    nullable: true
+
+  - name: value
+    data_type: decimal
+    description: Numeric value associated with the entry
+    nullable: false
+    constraints:
+      - type: min
+        value: 0
+        message: Value must be non-negative
+
+  - name: category
+    data_type: string
+    description: Category classification
+    nullable: false
+    constraints:
+      - type: max_length
+        value: 100
+
+  - name: is_active
+    data_type: boolean
+    description: Whether the entry is currently active
+    nullable: false
+
+  - name: created_at
+    data_type: timestamp
+    description: When the entry was created
+    nullable: false
+
+  - name: updated_at
+    data_type: timestamp
+    description: When the entry was last updated
+    nullable: false
+
+quality:
+  - metric_type: freshness
+    threshold: "15 minutes"
+    measurement_method: "MAX(updated_at) compared to current time"
+    alert_on_breach: true
+
+  - metric_type: completeness
+    threshold: "99.5%"
+    measurement_method: "Count of non-null required fields / total rows"
+    alert_on_breach: true
+
+  - metric_type: availability
+    threshold: "99.9%"
+    measurement_method: "Health endpoint uptime"
+    alert_on_breach: true
+
+access:
+  endpoint_url: http://template-data-service:8000
+  methods:
+    - GET
+    - POST
+  auth_type: none
+  rate_limit: "1000 req/min"
+
+subscribers: []
+
+tags:
+  - example
+  - template
+  - reference
+
+metadata:
+  documentation_url: https://docs.datapact.io/template-service
+  created_by: platform-team

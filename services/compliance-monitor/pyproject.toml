@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "compliance-monitor"
+version = "0.1.0"
+description = "DataPact Compliance Monitor - Background service for contract validation"
+authors = ["DataPact Team"]
+packages = [{include = "compliance_monitor", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+celery = {extras = ["redis"], version = "^5.3.0"}
+httpx = "^0.26.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+datapact-common = {path = "../../shared/datapact_common", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+ruff = "^0.1.0"
+mypy = "^1.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

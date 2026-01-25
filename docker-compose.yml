@@ -1,0 +1,204 @@
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: datapact
+      POSTGRES_PASSWORD: datapact_dev
+      POSTGRES_DB: datapact
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datapact"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and task queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Contract Service - Central registry for data contracts
+  contract-service:
+    build:
+      context: .
+      dockerfile: services/contract-service/Dockerfile.dev
+    environment:
+      DATABASE_URL: postgresql+asyncpg://datapact:datapact_dev@postgres:5432/contracts
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      # GitHub Integration (optional - set these to enable webhook features)
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      NOTIFICATION_SERVICE_URL: http://notification-service:8000
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/contract-service/src:/app/src
+      - ./shared:/app/shared
+
+  # Template Data Service - Reference implementation
+  template-data-service:
+    build:
+      context: .
+      dockerfile: services/template-data-service/Dockerfile.dev
+    environment:
+      DATABASE_URL: postgresql+asyncpg://datapact:datapact_dev@postgres:5432/template_data
+      CONTRACT_SERVICE_URL: http://contract-service:8000
+      SERVICE_NAME: template-data-service
+      CONTRACT_NAME: example_dataset
+      ENVIRONMENT: development
+    ports:
+      - "8010:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/template-data-service/src:/app/src
+      - ./shared:/app/shared
+
+  # Compliance Monitor Worker - Background compliance checking
+  compliance-worker:
+    build:
+      context: .
+      dockerfile: services/compliance-monitor/Dockerfile
+    command: celery -A compliance_monitor.celery_app worker --loglevel=info -Q compliance
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CONTRACT_SERVICE_URL: http://contract-service:8000
+      ENVIRONMENT: development
+    depends_on:
+      - contract-service
+      - redis
+    volumes:
+      - ./services/compliance-monitor/src:/app/src
+      - ./shared:/app/shared
+
+  # Compliance Monitor Beat Scheduler - Triggers scheduled checks
+  compliance-beat:
+    build:
+      context: .
+      dockerfile: services/compliance-monitor/Dockerfile
+    command: celery -A compliance_monitor.celery_app beat --loglevel=info
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CONTRACT_SERVICE_URL: http://contract-service:8000
+      ENVIRONMENT: development
+    depends_on:
+      - compliance-worker
+      - redis
+    volumes:
+      - ./services/compliance-monitor/src:/app/src
+      - ./shared:/app/shared
+
+  # Dictionary Service - Data dictionary and ERD generation
+  dictionary-service:
+    build:
+      context: .
+      dockerfile: services/dictionary-service/Dockerfile
+    environment:
+      CONTRACT_SERVICE_URL: http://contract-service:8000
+      ENVIRONMENT: development
+    ports:
+      - "8002:8000"
+    depends_on:
+      - contract-service
+    volumes:
+      - ./services/dictionary-service/src:/app/src
+
+  # Notification Service - REST API for notifications
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://datapact:datapact_dev@postgres:5432/notifications
+      REDIS_URL: redis://redis:6379/1
+      CONTRACT_SERVICE_URL: http://contract-service:8000
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USE_TLS: "false"
+      SMTP_FROM_EMAIL: datapact@example.com
+      FRONTEND_URL: http://localhost:3000
+      ENVIRONMENT: development
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    volumes:
+      - ./services/notification-service/src:/app/src
+
+  # Notification Worker - Celery worker for sending notifications
+  notification-worker:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    command: celery -A notification_service.celery_app worker --loglevel=info -Q notifications
+    environment:
+      DATABASE_URL: postgresql+asyncpg://datapact:datapact_dev@postgres:5432/notifications
+      REDIS_URL: redis://redis:6379/1
+      CONTRACT_SERVICE_URL: http://contract-service:8000
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USE_TLS: "false"
+      SMTP_FROM_EMAIL: datapact@example.com
+      FRONTEND_URL: http://localhost:3000
+      ENVIRONMENT: development
+    depends_on:
+      - notification-service
+      - redis
+      - mailhog
+    volumes:
+      - ./services/notification-service/src:/app/src
+
+  # MailHog - Local email testing (catches all outgoing emails)
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI to view emails
+
+  # Frontend - React dashboard (development with hot-reload)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_CONTRACT_SERVICE_URL: http://localhost:8001
+      VITE_DICTIONARY_SERVICE_URL: http://localhost:8002
+      VITE_NOTIFICATION_SERVICE_URL: http://localhost:8003
+    ports:
+      - "3000:3000"
+    depends_on:
+      - contract-service
+      - dictionary-service
+      - notification-service
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+
+volumes:
+  postgres_data:

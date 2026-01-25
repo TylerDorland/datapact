@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header header-error">
+    <h1>Pull Request Blocked</h1>
+</div>
+
+<div class="info-box">
+    <p><strong>Repository:</strong> {{ event.repository }}</p>
+    <p><strong>PR #{{ event.pr_number }}:</strong> {{ event.pr_title or 'Untitled' }}</p>
+    {% if event.pr_author %}
+    <p><strong>Author:</strong> {{ event.pr_author }}</p>
+    {% endif %}
+    <p><strong>Contract:</strong> {{ event.contract_name }}</p>
+    <p><strong>Blocked at:</strong> {{ event.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+</div>
+
+<div class="details">
+    <h3>Block Reason</h3>
+    <p>{{ event.reason }}</p>
+</div>
+
+{% if event.errors %}
+<div class="details">
+    <h3>Validation Errors</h3>
+    <ul>
+        {% for error in event.errors %}
+        <li class="error-item">{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if event.schema_files %}
+<div class="details">
+    <h3>Changed Schema Files</h3>
+    <ul>
+        {% for file in event.schema_files %}
+        <li><code>{{ file }}</code></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<p>This pull request modifies database schema files but does not include a corresponding update to the data contract. Please update <code>contract.yaml</code> to reflect the schema changes.</p>
+
+{% if event.pr_url %}
+<a href="{{ event.pr_url }}" class="button">View Pull Request</a>
+{% endif %}
+{% endblock %}

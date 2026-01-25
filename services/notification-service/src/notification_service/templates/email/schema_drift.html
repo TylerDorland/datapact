@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header header-error">
+    <h1>Schema Drift Detected</h1>
+</div>
+
+<div class="info-box">
+    <p><strong>Contract:</strong> {{ event.contract_name }}</p>
+    <p><strong>Version:</strong> {{ event.contract_version or 'N/A' }}</p>
+    <p><strong>Publisher:</strong> {{ event.publisher_team or 'N/A' }}</p>
+    <p><strong>Detected:</strong> {{ event.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+    {% if event.endpoint_url %}
+    <p><strong>Endpoint:</strong> <code>{{ event.endpoint_url }}</code></p>
+    {% endif %}
+</div>
+
+{% if event.errors %}
+<div class="details">
+    <h3>Errors</h3>
+    <ul>
+        {% for error in event.errors %}
+        <li class="error-item">{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if event.warnings %}
+<div class="details">
+    <h3>Warnings</h3>
+    <ul>
+        {% for warning in event.warnings %}
+        <li class="warning-item">{{ warning }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if event.missing_fields %}
+<div class="details">
+    <h3>Missing Fields</h3>
+    <ul>
+        {% for field in event.missing_fields %}
+        <li><code>{{ field }}</code></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if event.extra_fields %}
+<div class="details">
+    <h3>Undocumented Fields</h3>
+    <ul>
+        {% for field in event.extra_fields %}
+        <li><code>{{ field }}</code></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<p>The actual database schema does not match the contract definition. Please update either the contract or the database to ensure consistency.</p>
+
+<a href="{{ frontend_url }}/contracts/{{ event.contract_name }}" class="button">View Contract</a>
+{% endblock %}

@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "datapact-common"
+version = "0.1.0"
+description = "Shared contract schema definitions for DataPact"
+authors = ["DataPact Team"]
+packages = [{include = "datapact_common", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.5.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.23.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

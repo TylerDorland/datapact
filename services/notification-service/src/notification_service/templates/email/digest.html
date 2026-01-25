@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header header-info">
+    <h1>DataPact Digest</h1>
+</div>
+
+<div class="info-box">
+    <p>Here's a summary of recent notifications:</p>
+</div>
+
+{% for event_type, notifications in notifications_by_type.items() %}
+<div class="details">
+    <h3>{{ event_type.replace('_', ' ').title() }} ({{ notifications|length }})</h3>
+    <ul>
+        {% for notification in notifications %}
+        <li>
+            <strong>{{ notification.subject }}</strong><br>
+            <small style="color: #6b7280;">{{ notification.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</small>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endfor %}
+
+<p>View all notifications and manage your preferences in the dashboard.</p>
+
+<a href="{{ frontend_url }}/notifications" class="button">View Dashboard</a>
+{% endblock %}

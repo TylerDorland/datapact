@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header header-warning">
+    <h1>Quality SLA Breach</h1>
+</div>
+
+<div class="info-box">
+    <p><strong>Contract:</strong> {{ event.contract_name }}</p>
+    <p><strong>Version:</strong> {{ event.contract_version or 'N/A' }}</p>
+    <p><strong>Publisher:</strong> {{ event.publisher_team or 'N/A' }}</p>
+    <p><strong>Detected:</strong> {{ event.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+</div>
+
+<div class="details">
+    <h3>Breach Details</h3>
+    <div class="info-box">
+        <p><strong>Metric:</strong> {{ event.metric_type }}</p>
+        <p><strong>Threshold:</strong> {{ event.threshold }}</p>
+        <p><strong>Actual Value:</strong> {{ event.actual_value }}</p>
+        {% if event.is_critical %}
+        <p><strong style="color: #dc2626;">This is a critical breach!</strong></p>
+        {% endif %}
+    </div>
+</div>
+
+{% if event.failed_checks %}
+<div class="details">
+    <h3>Failed Checks</h3>
+    <ul>
+        {% for check in event.failed_checks %}
+        <li class="error-item">
+            <strong>{{ check.metric_type }}:</strong> {{ check.message or 'Failed' }}
+            {% if check.actual_value %} (Actual: {{ check.actual_value }}){% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if event.field_details %}
+<div class="details">
+    <h3>Field Details</h3>
+    <ul>
+        {% for field, value in event.field_details.items() %}
+        <li><code>{{ field }}</code>: {{ value }}%</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<p>The data quality has fallen below the defined SLA threshold. Please investigate and resolve the issue.</p>
+
+<a href="{{ frontend_url }}/contracts/{{ event.contract_name }}/compliance" class="button">View Compliance</a>
+{% endblock %}

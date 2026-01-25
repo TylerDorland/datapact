@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header header-warning">
+    <h1>Deprecation Warning</h1>
+</div>
+
+<div class="info-box">
+    <p><strong>Contract:</strong> {{ event.contract_name }}</p>
+    <p><strong>Version:</strong> {{ event.contract_version or 'N/A' }}</p>
+    <p><strong>Publisher:</strong> {{ event.publisher_team or 'N/A' }}</p>
+    <p><strong>Announced:</strong> {{ event.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+</div>
+
+<div class="details">
+    <h3>Deprecation Timeline</h3>
+    <div class="info-box">
+        {% if event.deprecation_date %}
+        <p><strong>Deprecation Date:</strong> {{ event.deprecation_date.strftime('%Y-%m-%d') }}</p>
+        {% endif %}
+        {% if event.removal_date %}
+        <p><strong>Removal Date:</strong> {{ event.removal_date.strftime('%Y-%m-%d') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if event.reason %}
+<div class="details">
+    <h3>Reason</h3>
+    <p>{{ event.reason }}</p>
+</div>
+{% endif %}
+
+{% if event.replacement_contract %}
+<div class="details">
+    <h3>Migration Path</h3>
+    <p>Please migrate to: <strong>{{ event.replacement_contract }}</strong></p>
+    {% if event.migration_guide_url %}
+    <p><a href="{{ event.migration_guide_url }}">View Migration Guide</a></p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if event.affected_subscribers %}
+<div class="details">
+    <h3>Affected Subscribers</h3>
+    <ul>
+        {% for subscriber in event.affected_subscribers %}
+        <li>{{ subscriber }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<p>This contract has been marked for deprecation. Please plan your migration accordingly.</p>
+
+<a href="{{ frontend_url }}/contracts/{{ event.contract_name }}" class="button">View Contract</a>
+{% endblock %}

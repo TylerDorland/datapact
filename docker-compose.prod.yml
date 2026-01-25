@@ -1,0 +1,45 @@
+version: "3.8"
+
+# Production overrides
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # Production frontend with nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_CONTRACT_SERVICE_URL: ""
+      VITE_DICTIONARY_SERVICE_URL: ""
+      VITE_NOTIFICATION_SERVICE_URL: ""
+    ports:
+      - "80:80"
+    volumes: []  # No volume mounts in production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Remove development volumes from services
+  contract-service:
+    volumes: []
+
+  template-data-service:
+    volumes: []
+
+  compliance-worker:
+    volumes: []
+
+  compliance-beat:
+    volumes: []
+
+  dictionary-service:
+    volumes: []
+
+  notification-service:
+    volumes: []
+
+  notification-worker:
+    volumes: []

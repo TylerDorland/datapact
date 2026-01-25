@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header header-info">
+    <h1>Contract Updated</h1>
+</div>
+
+<div class="info-box">
+    <p><strong>Contract:</strong> {{ event.contract_name }}</p>
+    <p><strong>New Version:</strong> {{ event.new_version }}</p>
+    {% if event.previous_version %}
+    <p><strong>Previous Version:</strong> {{ event.previous_version }}</p>
+    {% endif %}
+    <p><strong>Publisher:</strong> {{ event.publisher_team or 'N/A' }}</p>
+    <p><strong>Updated:</strong> {{ event.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+    {% if event.changed_by %}
+    <p><strong>Changed by:</strong> {{ event.changed_by }}</p>
+    {% endif %}
+</div>
+
+<div class="details">
+    <h3>Change Type</h3>
+    <p>{{ event.change_type }}</p>
+    {% if event.change_summary %}
+    <p>{{ event.change_summary }}</p>
+    {% endif %}
+</div>
+
+{% if event.added_fields %}
+<div class="details">
+    <h3>Added Fields</h3>
+    <ul>
+        {% for field in event.added_fields %}
+        <li style="color: #10b981;"><code>+ {{ field }}</code></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if event.removed_fields %}
+<div class="details">
+    <h3>Removed Fields</h3>
+    <ul>
+        {% for field in event.removed_fields %}
+        <li style="color: #dc2626;"><code>- {{ field }}</code></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if event.modified_fields %}
+<div class="details">
+    <h3>Modified Fields</h3>
+    <ul>
+        {% for field in event.modified_fields %}
+        <li style="color: #f59e0b;"><code>~ {{ field }}</code></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<p>Please review the changes and ensure your systems are compatible with the updated contract.</p>
+
+<a href="{{ frontend_url }}/contracts/{{ event.contract_name }}" class="button">View Contract</a>
+{% endblock %}
