@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     smtp_from_email: str = "datapact@example.com"
     smtp_from_name: str = "DataPact"
 
+    # Azure Communication Services (alternative to SMTP)
+    email_provider: str = "smtp"  # "smtp" or "azure"
+    acs_connection_string: str | None = None
+    acs_sender_address: str = "DoNotReply@yourdomain.com"
+
     # Notification Settings
     notification_rate_limit_per_hour: int = 100
     notification_dedup_window_minutes: int = 60

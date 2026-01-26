@@ -8,7 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from notification_service.celery_app import celery_app
-from notification_service.channels.email import EmailChannel
+from notification_service.config import settings
 from notification_service.database import async_session_maker
 from notification_service.models.notification import Notification, NotificationStatus
 from notification_service.schemas.events import (
@@ -71,7 +71,14 @@ async def _send_notification_async(notification_id: str) -> bool:
 
         # Send via appropriate channel
         if notification.channel == "email":
-            channel = EmailChannel()
+            if settings.email_provider == "azure":
+                from notification_service.channels.azure_email import AzureEmailChannel
+
+                channel = AzureEmailChannel()
+            else:
+                from notification_service.channels.email import EmailChannel
+
+                channel = EmailChannel()
             success, error = await channel.send(notification)
         else:
             success, error = False, f"Unknown channel: {notification.channel}"

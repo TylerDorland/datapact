@@ -1,0 +1,244 @@
+name: Deploy DataPact to Azure
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  ACR_NAME: ${{ vars.ACR_NAME }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+
+jobs:
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Contract Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/contract-service/Dockerfile
+          push: true
+          tags: ${{ env.ACR_NAME }}.azurecr.io/datapact/contract-service:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/datapact/contract-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Dictionary Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/dictionary-service/Dockerfile
+          push: true
+          tags: ${{ env.ACR_NAME }}.azurecr.io/datapact/dictionary-service:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/datapact/dictionary-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Notification Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/notification-service/Dockerfile
+          push: true
+          tags: ${{ env.ACR_NAME }}.azurecr.io/datapact/notification-service:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/datapact/notification-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Template Data Service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/template-data-service/Dockerfile
+          push: true
+          tags: ${{ env.ACR_NAME }}.azurecr.io/datapact/template-data-service:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/datapact/template-data-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Compliance Monitor
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/compliance-monitor/Dockerfile
+          push: true
+          tags: ${{ env.ACR_NAME }}.azurecr.io/datapact/compliance-monitor:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/datapact/compliance-monitor:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ env.ACR_NAME }}.azurecr.io/datapact/frontend:${{ github.sha }},${{ env.ACR_NAME }}.azurecr.io/datapact/frontend:latest
+          build-args: |
+            VITE_API_BASE_URL=https://${{ env.PROJECT_NAME }}-datapact-contract.azurewebsites.net
+            VITE_DICTIONARY_API_URL=https://${{ env.PROJECT_NAME }}-datapact-dictionary.azurewebsites.net
+            VITE_NOTIFICATION_API_URL=https://${{ env.PROJECT_NAME }}-datapact-notification.azurewebsites.net
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Azure App Service
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Contract Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-contract
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/contract-service:${{ github.sha }}
+
+      - name: Deploy Dictionary Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-dictionary
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/dictionary-service:${{ github.sha }}
+
+      - name: Deploy Notification Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-notification
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/notification-service:${{ github.sha }}
+
+      - name: Deploy Template Data Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-template
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/template-data-service:${{ github.sha }}
+
+      - name: Deploy Frontend
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-frontend
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/frontend:${{ github.sha }}
+
+      - name: Deploy Compliance Worker
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-compliance-worker
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/compliance-monitor:${{ github.sha }}
+
+      - name: Deploy Compliance Beat
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-compliance-beat
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/compliance-monitor:${{ github.sha }}
+
+      - name: Deploy Notification Worker
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.PROJECT_NAME }}-datapact-notification-worker
+          images: ${{ env.ACR_NAME }}.azurecr.io/datapact/notification-service:${{ github.sha }}
+
+  run-migrations:
+    name: Run Database Migrations
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Run Contract Service Migrations
+        run: |
+          az webapp ssh --name ${{ env.PROJECT_NAME }}-datapact-contract \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --command "cd /app && alembic upgrade head" \
+            --timeout 120 || echo "Migration may have already been applied"
+
+      - name: Run Notification Service Migrations
+        run: |
+          az webapp ssh --name ${{ env.PROJECT_NAME }}-datapact-notification \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --command "cd /app && alembic upgrade head" \
+            --timeout 120 || echo "Migration may have already been applied"
+
+      - name: Run Template Data Service Migrations
+        run: |
+          az webapp ssh --name ${{ env.PROJECT_NAME }}-datapact-template \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --command "cd /app && alembic upgrade head" \
+            --timeout 120 || echo "Migration may have already been applied"
+
+  health-check:
+    name: Verify Deployment
+    needs: run-migrations
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for services to start
+        run: sleep 30
+
+      - name: Health check - Contract Service
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.PROJECT_NAME }}-datapact-contract.azurewebsites.net/health || echo "000")
+          if [ "$response" != "200" ]; then
+            echo "Contract Service health check failed with status $response"
+            exit 1
+          fi
+          echo "Contract Service is healthy"
+
+      - name: Health check - Dictionary Service
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.PROJECT_NAME }}-datapact-dictionary.azurewebsites.net/health || echo "000")
+          if [ "$response" != "200" ]; then
+            echo "Dictionary Service health check failed with status $response"
+            exit 1
+          fi
+          echo "Dictionary Service is healthy"
+
+      - name: Health check - Frontend
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.PROJECT_NAME }}-datapact-frontend.azurewebsites.net/ || echo "000")
+          if [ "$response" != "200" ]; then
+            echo "Frontend health check failed with status $response"
+            exit 1
+          fi
+          echo "Frontend is healthy"
+
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | https://${{ env.PROJECT_NAME }}-datapact-frontend.azurewebsites.net |" >> $GITHUB_STEP_SUMMARY
+          echo "| Contract API | https://${{ env.PROJECT_NAME }}-datapact-contract.azurewebsites.net |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dictionary API | https://${{ env.PROJECT_NAME }}-datapact-dictionary.azurewebsites.net |" >> $GITHUB_STEP_SUMMARY
+          echo "| Notification API | https://${{ env.PROJECT_NAME }}-datapact-notification.azurewebsites.net |" >> $GITHUB_STEP_SUMMARY

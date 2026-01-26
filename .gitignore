@@ -184,3 +184,11 @@ temp/
 *.key
 secrets/
 credentials/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+.terraform.lock.hcl

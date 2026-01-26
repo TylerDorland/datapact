@@ -1,0 +1,5 @@
+subscription_id   = "your-azure-subscription-id"
+project_name      = "azuretestdata"
+location          = "eastus"
+db_admin_username = "pgadmin"
+db_admin_password = "ChangeThisPassword123!"
