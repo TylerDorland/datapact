@@ -1,7 +1,10 @@
 """Configuration settings for Contract Service."""
 
+import json
 from functools import lru_cache
+from typing import Any
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +16,13 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://datapact:datapact_dev@localhost:5432/contracts"
 
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def convert_sslmode_for_asyncpg(cls, v: str) -> str:
+        """Convert sslmode to ssl for asyncpg compatibility."""
+        # asyncpg uses 'ssl' instead of 'sslmode'
+        return v.replace("sslmode=", "ssl=")
+
     # Redis (for future use with Celery)
     redis_url: str = "redis://localhost:6379/0"
 
@@ -22,6 +32,21 @@ class Settings(BaseSettings):
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8001"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        """Parse CORS origins from JSON array or comma-separated string."""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("["):
+                # JSON array format
+                return json.loads(v)
+            # Comma-separated format
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     # GitHub Integration (optional)
     github_webhook_secret: str | None = None

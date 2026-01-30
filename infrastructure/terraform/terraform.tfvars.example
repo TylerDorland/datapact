@@ -1,5 +1,13 @@
-subscription_id   = "your-azure-subscription-id"
+subscription_id   = "6c850fe1-522b-4e37-a2ea-bf9c81bf71f4"
 project_name      = "azuretestdata"
-location          = "eastus"
+location          = "westus2"
 db_admin_username = "pgadmin"
-db_admin_password = "ChangeThisPassword123!"
+db_admin_password = "CHANGE_ME"
+
+# Reference to existing infrastructure
+existing_resource_group       = "azuretestdata-rg"
+existing_postgres_server_name = "azuretestdata-pgserver"
+existing_acr_name             = "azuretestdataacr"
+
+# Optional: Email domain for notifications
+datapact_email_domain = ""

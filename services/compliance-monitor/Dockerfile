@@ -6,14 +6,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VERSION=1.7.1
-ENV PATH="$POETRY_HOME/bin:$PATH"
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
+RUN pip install --no-cache-dir poetry==1.7.1 && \
     poetry config virtualenvs.create false
 
 # Copy shared library first

@@ -3,6 +3,16 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build args for API URLs
+ARG VITE_API_BASE_URL=http://localhost:8001
+ARG VITE_DICTIONARY_API_URL=http://localhost:8002
+ARG VITE_NOTIFICATION_API_URL=http://localhost:8003
+
+# Set as env vars for the build
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_DICTIONARY_API_URL=$VITE_DICTIONARY_API_URL
+ENV VITE_NOTIFICATION_API_URL=$VITE_NOTIFICATION_API_URL
+
 # Copy package files
 COPY package.json package-lock.json* ./
 
@@ -18,8 +28,8 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy production nginx config (no proxy, just static files)
+COPY nginx.prod.conf /etc/nginx/nginx.conf
 
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html

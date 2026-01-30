@@ -10,10 +10,16 @@ terraform {
 
 provider "azurerm" {
   features {}
-  subscription_id = var.subscription_id
+  subscription_id                 = var.subscription_id
+  resource_provider_registrations = "none"
 }
 
-resource "azurerm_resource_group" "main" {
-  name     = "${var.project_name}-rg"
+# DataPact's own resource group
+resource "azurerm_resource_group" "datapact" {
+  name     = "${var.project_name}-datapact-rg"
   location = var.location
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }

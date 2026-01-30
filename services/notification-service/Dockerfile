@@ -6,14 +6,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VERSION=1.7.1
-ENV PATH="$POETRY_HOME/bin:$PATH"
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
+RUN pip install --no-cache-dir poetry==1.7.1 && \
     poetry config virtualenvs.create false
 
 # Set Python path for development with volume mounts
@@ -29,9 +25,13 @@ RUN poetry install --no-interaction --no-ansi --no-root
 COPY services/notification-service/src/ ./src/
 COPY services/notification-service/alembic.ini .
 COPY services/notification-service/alembic/ ./alembic/
+COPY services/notification-service/startup.sh .
 
 # Install the package itself
 RUN poetry install --no-interaction --no-ansi --only-root
 
-# Run with uvicorn
-CMD ["uvicorn", "notification_service.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Make startup script executable
+RUN chmod +x startup.sh
+
+# Run startup script (runs migrations then starts app)
+CMD ["./startup.sh"]

@@ -1,6 +1,6 @@
 resource "azurerm_communication_service" "datapact" {
-  name                = "${var.project_name}-datapact-acs"
-  resource_group_name = azurerm_resource_group.main.name
+  name                = "${var.project_name}-datapact-comm"
+  resource_group_name = azurerm_resource_group.datapact.name
   data_location       = "United States"
 }
 

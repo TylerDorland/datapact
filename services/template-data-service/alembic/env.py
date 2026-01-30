@@ -14,10 +14,8 @@ from data_service.models import Base
 # Alembic Config object
 config = context.config
 
-# Set the database URL from settings
-config.set_main_option(
-    "sqlalchemy.url", settings.database_url.replace("+asyncpg", "+psycopg2")
-)
+# Set the database URL from settings (keep asyncpg for async migrations)
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # Configure logging
 if config.config_file_name is not None:

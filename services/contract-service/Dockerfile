@@ -6,32 +6,35 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VERSION=1.7.1
-ENV PATH="$POETRY_HOME/bin:$PATH"
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
+RUN pip install --no-cache-dir poetry==1.7.1 && \
     poetry config virtualenvs.create false
 
-# Copy shared library first
-COPY ../../shared/datapact_common /app/shared/datapact_common
+# Copy shared library first (build from repo root with -f flag)
+COPY shared/datapact_common /app/shared/datapact_common
 
 # Copy dependency files
-COPY pyproject.toml poetry.lock* ./
+COPY services/contract-service/pyproject.toml services/contract-service/poetry.lock* ./
+
+# Update the path in pyproject.toml for Docker context
+RUN sed -i 's|../../shared/datapact_common|/app/shared/datapact_common|g' pyproject.toml
 
 # Install dependencies
 RUN poetry install --no-interaction --no-ansi --no-root
 
 # Copy application code
-COPY src/ ./src/
-COPY alembic.ini .
-COPY alembic/ ./alembic/
+COPY services/contract-service/src/ ./src/
+COPY services/contract-service/alembic.ini .
+COPY services/contract-service/alembic/ ./alembic/
+COPY services/contract-service/startup.sh .
 
 # Install the package itself
 RUN poetry install --no-interaction --no-ansi --only-root
 
-# Run with uvicorn
-CMD ["uvicorn", "contract_service.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Make startup script executable
+RUN chmod +x startup.sh
+
+# Run startup script (runs migrations then starts app)
+CMD ["./startup.sh"]

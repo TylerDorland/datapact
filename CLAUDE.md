@@ -203,31 +203,36 @@ Tech stack: React 18, TypeScript, Vite, TanStack Query, Tailwind CSS, shadcn/ui,
 
 ## Azure Deployment
 
-Infrastructure is defined in `infrastructure/terraform/`. GitHub Actions workflows handle CI/CD.
+Infrastructure is defined in `infrastructure/terraform/`. This terraform config references an existing PostgreSQL server and Container Registry from another resource group.
+
+### Manual Deployment
+
+```bash
+./deploy.sh    # Builds all images, pushes to ACR, restarts App Services
+```
 
 ### Terraform Resources
 
 | File | Resources |
 |------|-----------|
-| `datapact.tf` | 8 web apps (4 services, 3 workers, 1 frontend) |
-| `redis.tf` | Azure Cache for Redis |
+| `app_service.tf` | App Service Plan + 5 web apps (4 services, 1 frontend). Workers are commented out. |
 | `communication.tf` | Azure Communication Services (email) |
-| `database.tf` | PostgreSQL + 3 DataPact databases |
+| `database.tf` | 3 DataPact databases on existing PostgreSQL server |
+| `data.tf` | Data sources for existing PostgreSQL server and ACR |
 
-### GitHub Actions Workflows
+**Note**: Redis and Celery workers are currently disabled in terraform to speed up provisioning. Uncomment in `app_service.tf` when needed.
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `deploy-azure.yml` | Push to main | Build images, deploy to App Service, run migrations |
-| `terraform.yml` | Changes to `infrastructure/terraform/` | Plan/Apply infrastructure |
+### Terraform Variables
 
-### Required GitHub Secrets
+Key variables in `variables.tf`:
+- `existing_postgres_server_name` - Name of shared PostgreSQL server
+- `existing_acr_name` - Name of shared Container Registry
+- `existing_resource_group` - Resource group containing shared resources
+- `db_admin_username` / `db_admin_password` - PostgreSQL credentials
 
-`AZURE_CREDENTIALS`, `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_SUBSCRIPTION_ID`, `ARM_TENANT_ID`, `DB_ADMIN_PASSWORD`
+### Migrations
 
-### Required GitHub Variables
-
-`AZURE_RESOURCE_GROUP`, `ACR_NAME`, `PROJECT_NAME`, `DATAPACT_EMAIL_DOMAIN`
+Services run `alembic upgrade head` automatically on container startup via `startup.sh`. No manual migration step needed after deployment.
 
 ### Email Provider Configuration
 
